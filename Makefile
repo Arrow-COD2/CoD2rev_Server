@@ -95,6 +95,7 @@ LIBCOD_SETTINGS+=-D LIBCOD_COMPILE_SQLITE=1
 endif
 LIBCOD_SETTINGS+=-D LIBCOD_COMPILE_UTILS=1
 LIBCOD_SETTINGS+=-D LIBCOD_COMPILE_WEAPONS=1
+LIBCOD_SETTINGS+=-D LIBCOD_COMPILE_JSON=1
 endif
 
 ifeq ($(WITH_LIBCOD),true)
@@ -124,6 +125,9 @@ SQLITE_DIR=$(SRC_DIR)/libcod/sqlite
 SQLITE_SOURCES=$(wildcard $(SQLITE_DIR)/*.c)
 SQLITE_OBJ=$(patsubst $(SQLITE_DIR)/%.c,$(OBJ_DIR)/%.o,$(SQLITE_SOURCES))
 endif
+YYJSON_DIR=$(SRC_DIR)/libcod/yyjson
+YYJSON_SOURCES=$(wildcard $(YYJSON_DIR)/*.c)
+YYJSON_OBJ=$(patsubst $(YYJSON_DIR)/%.c,$(OBJ_DIR)/%.o,$(YYJSON_SOURCES))
 endif
 
 # Target files
@@ -167,7 +171,7 @@ ZLIB_OBJ=$(patsubst $(ZLIB_DIR)/%.c,$(OBJ_DIR)/%.o,$(ZLIB_SOURCES))
 cod2rev: mkdir $(TARGET)
     $(TARGET): \
 	$(BGAME_OBJ) $(GAME_OBJ) $(QCOMMON_OBJ) $(SCR_OBJ) $(SERVER_OBJ) $(STRINGED_OBJ) $(UNIVERSAL_OBJ) $(XANIM_OBJ) \
-	$(LINUX_OBJ) $(WIN32_OBJ) $(WIN32_RES_OBJ) $(ZLIB_OBJ) $(LIBCOD_OBJ) $(MONGOOSE_OBJ) $(SQLITE_OBJ)
+	$(LINUX_OBJ) $(WIN32_OBJ) $(WIN32_RES_OBJ) $(ZLIB_OBJ) $(LIBCOD_OBJ) $(MONGOOSE_OBJ) $(SQLITE_OBJ) $(YYJSON_OBJ)
 	$(CC) $(LFLAGS) -o $@ $^ $(LLIBS)
 
 ifeq ($(OS),Windows_NT)
@@ -259,6 +263,12 @@ $(OBJ_DIR)/%.o: $(MONGOOSE_DIR)/%.c
 $(OBJ_DIR)/%.o: $(SQLITE_DIR)/%.c
 	@echo $(CC)  $@
 	@$(CC) -c $(CFLAGS) -o $@ $<
+
+# A rule to build yyjson source code (same options as zk_libcod: no incremental
+# reader, no utils, SSE math on i386).
+$(OBJ_DIR)/%.o: $(YYJSON_DIR)/%.c
+	@echo $(CC)  $@
+	@$(CC) -c $(CFLAGS) -mfpmath=sse -msse2 -DYYJSON_DISABLE_INCR_READER=1 -DYYJSON_DISABLE_UTILS=1 -w -o $@ $<
 
 
 # Cleanup

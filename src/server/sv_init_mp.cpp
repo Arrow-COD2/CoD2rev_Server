@@ -859,6 +859,10 @@ void SV_SpawnServer( char *server )
 
 #ifdef LIBCOD
 	Cod2x_CheckUpdateOnMapChange();
+#if LIBCOD_COMPILE_JSON == 1
+	// Drop finished async JSON jobs nobody claimed before the map change
+	gsc_json_cleanup_on_spawn_server();
+#endif
 #endif
 
 	// ydnar: broadcast a level change to all connected clients

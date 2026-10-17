@@ -138,6 +138,9 @@ void RegisterLibcodDvars()
 	g_spectateBots = Dvar_RegisterBool("g_spectateBots", true, DVAR_CHANGEABLE_RESET);
 	sv_downloadMessageAtMap = Dvar_RegisterBool("sv_downloadMessageAtMap", true, DVAR_ARCHIVE | DVAR_CHANGEABLE_RESET);
 	sv_downloadNotifications = Dvar_RegisterBool("sv_downloadNotifications", false, DVAR_ARCHIVE | DVAR_CHANGEABLE_RESET);
+#if LIBCOD_COMPILE_JSON == 1
+	gsc_json_register_dvars();
+#endif
 	sv_botReconnectMode = Dvar_RegisterInt("sv_botReconnectMode", 0, 0, 2, DVAR_CHANGEABLE_RESET);
 	sv_authorizeServer = Dvar_RegisterString("sv_authorizeServer", AUTHORIZE_SERVER_NAME, DVAR_ARCHIVE | DVAR_LATCH);
 	sv_authorizePort = Dvar_RegisterInt("sv_authorizePort", PORT_AUTHORIZE, 0, 65535, DVAR_ARCHIVE | DVAR_LATCH);

@@ -213,6 +213,17 @@ scr_function_t scriptFunctions[] =
 	{"async_mysql_real_escape_string", gsc_async_mysql_real_escape_string, 0},
 #endif
 
+#if LIBCOD_COMPILE_JSON == 1
+	{"json_parse", gsc_json_parse, 0},
+	{"json_stringify", gsc_json_stringify, 0},
+	{"json_load", gsc_json_load, 0},
+	{"json_save", gsc_json_save, 0},
+	{"json_load_async", gsc_json_load_async, 0},
+	{"json_save_async", gsc_json_save_async, 0},
+	{"json_async_done", gsc_json_async_done, 0},
+	{"json_async_result", gsc_json_async_result, 0},
+#endif
+
 #if LIBCOD_COMPILE_PLAYER == 1
 	{"kick2", gsc_kick_slot, 0},
 #endif

@@ -53,6 +53,10 @@
 #include "gsc_mysql_voron.hpp"
 #endif
 
+#if LIBCOD_COMPILE_JSON == 1
+#include "gsc_json.hpp"
+#endif
+
 #if LIBCOD_COMPILE_PLAYER == 1
 #include "gsc_player.hpp"
 #endif
