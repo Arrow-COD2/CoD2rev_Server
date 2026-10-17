@@ -4,6 +4,8 @@
 
 #include "mysql/include/mysql.h"
 #include <pthread.h>
+#include <climits>
+#include <unordered_map>
 
 #ifndef MAX_STRINGLENGTH
 #define MAX_STRINGLENGTH 1024
@@ -168,7 +170,8 @@ void gsc_async_mysql_initialize()
 	else
 		Com_DPrintf("gsc_async_mysql_initialize() async connection already initialized.\n");
 
-	stackPushPointer(async_mysql_connection);
+	// The handle is only a success flag for scripts: they never pass it back
+	stackPushInt(1);
 }
 
 void gsc_async_mysql_close()
@@ -974,6 +977,49 @@ void gsc_async_mysql_real_escape_string()
 
 MYSQL *mysql_connection = NULL;
 
+/*
+ * Script-side result handles.
+ *
+ * The GSC API inherited from zk_libcod / libcod 1.3 hands result handles to
+ * scripts as plain integers, and existing mods compare them to 0. A raw
+ * MYSQL_RES pointer does not fit in an int on x64, so results are kept in this
+ * table and scripts receive a small integer id instead. This works the same on
+ * x86 and x64. Id 0 is never issued: it means "no result", as in zk_libcod.
+ */
+static std::unordered_map<int, MYSQL_RES *> mysql_result_handles;
+static int mysql_result_next_id = 1;
+
+static int MySQL_RegisterResult(MYSQL_RES *result)
+{
+	if ( result == NULL )
+		return 0;
+
+	int id;
+
+	// Skip ids still in use after a wrap-around (only possible if a script
+	// leaks results for a very long time)
+	do
+	{
+		id = mysql_result_next_id;
+		mysql_result_next_id = ( mysql_result_next_id == INT_MAX ) ? 1 : mysql_result_next_id + 1;
+	}
+	while ( mysql_result_handles.count(id) );
+
+	mysql_result_handles[id] = result;
+
+	return id;
+}
+
+static MYSQL_RES *MySQL_FindResult(int id)
+{
+	std::unordered_map<int, MYSQL_RES *>::iterator it = mysql_result_handles.find(id);
+
+	if ( it == mysql_result_handles.end() )
+		return NULL;
+
+	return it->second;
+}
+
 void gsc_mysql_initialize()
 {
 	const char *host, *user, *pass, *db;
@@ -1004,7 +1050,8 @@ void gsc_mysql_initialize()
 	else
 		Com_DPrintf("gsc_mysql_initialize() synchronous connection already initialized.\n");
 
-	stackPushPointer(mysql_connection);
+	// The handle is only a success flag for scripts: they never pass it back
+	stackPushInt(1);
 }
 
 void gsc_mysql_close()
@@ -1086,14 +1133,14 @@ void gsc_mysql_store_result()
 
 	MYSQL_RES *result = mysql_store_result(mysql_connection);
 
-	stackPushPointer(result);
+	stackPushInt(MySQL_RegisterResult(result));
 }
 
 void gsc_mysql_num_rows()
 {
-	void *result;
+	int handle;
 
-	if ( !stackGetParams("p", &result) )
+	if ( !stackGetParams("i", &handle) )
 	{
 		stackError("gsc_mysql_num_rows() argument is undefined or has a wrong type");
 		stackPushUndefined();
@@ -1107,6 +1154,15 @@ void gsc_mysql_num_rows()
 		return;
 	}
 
+	MYSQL_RES *result = MySQL_FindResult(handle);
+
+	if ( result == NULL )
+	{
+		stackError("gsc_mysql_num_rows() invalid result handle %i", handle);
+		stackPushUndefined();
+		return;
+	}
+
 	int ret = mysql_num_rows((MYSQL_RES *)result);
 
 	stackPushInt(ret);
@@ -1114,9 +1170,9 @@ void gsc_mysql_num_rows()
 
 void gsc_mysql_num_fields()
 {
-	void *result;
+	int handle;
 
-	if ( !stackGetParams("p", &result) )
+	if ( !stackGetParams("i", &handle) )
 	{
 		stackError("gsc_mysql_num_fields() argument is undefined or has a wrong type");
 		stackPushUndefined();
@@ -1130,6 +1186,15 @@ void gsc_mysql_num_fields()
 		return;
 	}
 
+	MYSQL_RES *result = MySQL_FindResult(handle);
+
+	if ( result == NULL )
+	{
+		stackError("gsc_mysql_num_fields() invalid result handle %i", handle);
+		stackPushUndefined();
+		return;
+	}
+
 	int ret = mysql_num_fields((MYSQL_RES *)result);
 
 	stackPushInt(ret);
@@ -1137,10 +1202,10 @@ void gsc_mysql_num_fields()
 
 void gsc_mysql_field_seek()
 {
-	void *result;
+	int handle;
 	int offset;
 
-	if ( !stackGetParams("pi", &result, &offset) )
+	if ( !stackGetParams("ii", &handle, &offset) )
 	{
 		stackError("gsc_mysql_field_seek() one or more arguments is undefined or has a wrong type");
 		stackPushUndefined();
@@ -1154,6 +1219,15 @@ void gsc_mysql_field_seek()
 		return;
 	}
 
+	MYSQL_RES *result = MySQL_FindResult(handle);
+
+	if ( result == NULL )
+	{
+		stackError("gsc_mysql_field_seek() invalid result handle %i", handle);
+		stackPushUndefined();
+		return;
+	}
+
 	int ret = mysql_field_seek((MYSQL_RES *)result, offset);
 
 	stackPushInt(ret);
@@ -1161,9 +1235,9 @@ void gsc_mysql_field_seek()
 
 void gsc_mysql_fetch_field()
 {
-	void *result;
+	int handle;
 
-	if ( !stackGetParams("p", &result) )
+	if ( !stackGetParams("i", &handle) )
 	{
 		stackError("gsc_mysql_fetch_field() argument is undefined or has a wrong type");
 		stackPushUndefined();
@@ -1173,6 +1247,15 @@ void gsc_mysql_fetch_field()
 	if ( mysql_connection == NULL )
 	{
 		stackError("gsc_mysql_fetch_field() synchronous connection is not initialized!");
+		stackPushUndefined();
+		return;
+	}
+
+	MYSQL_RES *result = MySQL_FindResult(handle);
+
+	if ( result == NULL )
+	{
+		stackError("gsc_mysql_fetch_field() invalid result handle %i", handle);
 		stackPushUndefined();
 		return;
 	}
@@ -1192,9 +1275,9 @@ void gsc_mysql_fetch_field()
 
 void gsc_mysql_fetch_row()
 {
-	void *result;
+	int handle;
 
-	if ( !stackGetParams("p", &result) )
+	if ( !stackGetParams("i", &handle) )
 	{
 		stackError("gsc_mysql_fetch_row() argument is undefined or has a wrong type");
 		stackPushUndefined();
@@ -1204,6 +1287,15 @@ void gsc_mysql_fetch_row()
 	if ( mysql_connection == NULL )
 	{
 		stackError("gsc_mysql_fetch_row() synchronous connection is not initialized!");
+		stackPushUndefined();
+		return;
+	}
+
+	MYSQL_RES *result = MySQL_FindResult(handle);
+
+	if ( result == NULL )
+	{
+		stackError("gsc_mysql_fetch_row() invalid result handle %i", handle);
 		stackPushUndefined();
 		return;
 	}
@@ -1233,9 +1325,9 @@ void gsc_mysql_fetch_row()
 
 void gsc_mysql_free_result()
 {
-	void *result;
+	int handle;
 
-	if ( !stackGetParams("p", &result) )
+	if ( !stackGetParams("i", &handle) )
 	{
 		stackError("gsc_mysql_free_result() argument is undefined or has a wrong type");
 		stackPushUndefined();
@@ -1249,7 +1341,17 @@ void gsc_mysql_free_result()
 		return;
 	}
 
-	mysql_free_result((MYSQL_RES *)result);
+	MYSQL_RES *result = MySQL_FindResult(handle);
+
+	if ( result == NULL )
+	{
+		stackError("gsc_mysql_free_result() invalid result handle %i", handle);
+		stackPushUndefined();
+		return;
+	}
+
+	mysql_result_handles.erase(handle);
+	mysql_free_result(result);
 
 	stackPushBool(qtrue);
 }
