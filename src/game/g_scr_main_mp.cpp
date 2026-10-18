@@ -30,7 +30,12 @@ scr_function_t functions[] =
 	{ "getcvarfloat", GScr_GetDvarFloat, qfalse, },
 	{ "setcvar", GScr_SetDvar, qfalse, },
 	{ "gettime", GScr_GetTime, qfalse, },
+#ifdef LIBCOD
+	// libcod: usable outside /# #/ blocks, as zk_libcod patches it on 1.3
+	{ "getentbynum", Scr_GetEntByNum, qfalse, },
+#else
 	{ "getentbynum", Scr_GetEntByNum, qtrue, },
+#endif
 	{ "getweaponmodel", Scr_GetWeaponModel, qfalse, },
 	{ "getanimlength", GScr_GetAnimLength, qfalse, },
 	{ "animhasnotetrack", GScr_AnimHasNotetrack, qfalse, },
