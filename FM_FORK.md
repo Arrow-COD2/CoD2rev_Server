@@ -7,7 +7,7 @@ editing a single line of GSC.
 
 Base: [theCrow007/CoD2rev_Server](https://github.com/theCrow007/CoD2rev_Server),
 branch `test` (Crow's zk_libcod port plus his `SV_UserinfoChanged` experiment).
-Seven fix commits on top, each independent.
+Eight fix commits on top, each independent.
 
 ## What this branch changes
 
@@ -20,6 +20,7 @@ Seven fix commits on top, each independent.
 | Weapons: 1-based index | `isValidWeaponId()` assumed 0-based ids: the **last** loaded weapon was rejected and index 0 (`none`, also what an unknown name resolves to) was accepted. | Range is `1..BG_GetNumWeapons()`, as in the engine and zk. An unknown weapon returns `undefined` with a developer print instead of a fatal script error, as on zk. |
 | `getStance` registered once | `getstance` (`"duck"`/`"lie"`) and `getStance` (`"crouch"`/`"prone"`) were both registered; lookup is case-insensitive and stops at the first match, so the zk-compatible values were unreachable. | Only the zk / CoD2x variant is registered. |
 | Bot input reset and `switchToWeapon` | Bot buttons, movement and requested weapon were never cleared, so a bot taking over a slot inherited a held reload or fire button and could not raise its scope (bots replaced for a dead scope). `switchToWeapon()` sent a server command that a bot never reads. | Bot input is cleared on connect with the rest of the per-client state. For a bot, `switchToWeapon()` sets the weapon its usercmd asks for, as on zk. |
+| Keep every queued server command | The engine replaced a server command not yet sent by a newer one of the same kind. Several `executeClientCommand()` calls in one frame all queue a `v activeAction` command, so only the last reached the client: login fields declared with `setu` never became userinfo and the login menu read empty values. | `SV_CanReplaceServerCommand()` returns -1 in libcod builds, as zk_libcod does (an exploit fix it took from IW4x). |
 
 ## Build
 
