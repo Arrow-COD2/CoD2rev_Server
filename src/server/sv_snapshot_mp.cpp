@@ -962,10 +962,18 @@ void SV_SendClientMessages( void )
 
 			// send additional message fragments if the last message
 			// was too large to send at once
-			while ( c->netchan.unsentFragments )
+			// One fragment per pass, paced by the client rate, as in the stock
+			// code below. A while loop sent every fragment of a large message
+			// (an 11 KB gamestate is 9 packets) in one burst, followed by a
+			// snapshot; lines with small buffers (ADSL) drop the tail of such a
+			// burst, a fragmented message is lost if one fragment is, and the
+			// client looped on "dropped gamestate, resending" forever. During
+			// a fast download each pass of this loop still sends a fragment.
+			if ( c->netchan.unsentFragments )
 			{
 				c->nextSnapshotTime = svs.time + SV_RateMsec( c, c->netchan.unsentLength - c->netchan.unsentFragmentStart );
 				SV_Netchan_TransmitNextFragment(&c->netchan);
+				continue;
 			}
 
 			// generate and send a new message
