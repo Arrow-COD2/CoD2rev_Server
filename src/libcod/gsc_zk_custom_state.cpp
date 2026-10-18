@@ -13,6 +13,19 @@ void zk_ResetCustomPlayerState(int clientNum)
 		return;
 
 	memset(&customPlayerState[clientNum], 0, sizeof(customPlayerState_t));
+
+	// Bot input lives in its own arrays (libcod.cpp), outside customPlayerState.
+	// zk_libcod clears it with the rest of the per-client state; without this,
+	// a bot taking over a slot inherits the previous bot's held buttons
+	// (reload, fire, ADS), its movement and its requested weapon.
+	extern int bot_buttons[MAX_CLIENTS];
+	extern int bot_weapon[MAX_CLIENTS];
+	extern char bot_forwardmove[MAX_CLIENTS];
+	extern char bot_rightmove[MAX_CLIENTS];
+	bot_buttons[clientNum] = 0;
+	bot_weapon[clientNum] = 0;
+	bot_forwardmove[clientNum] = 0;
+	bot_rightmove[clientNum] = 0;
 	for ( int oi = 0; oi < MAX_OBJECTIVES; oi++ )
 		customPlayerState[clientNum].objectives[oi].entNum = ENTITYNUM_NONE;
 

@@ -713,6 +713,19 @@ void PlayerCmd_switchToWeapon( scr_entref_t entref )
 		return;
 	}
 
+#ifdef LIBCOD
+	// A bot never reads the select-weapon server command, so the switch would
+	// silently do nothing. As in zk_libcod, store it as the weapon its
+	// generated usercmd asks for (SV_BotUserMove_libcod).
+	if ( svs.clients[entref.entnum].netchan.remoteAddress.type == NA_BOT )
+	{
+		extern int bot_weapon[MAX_CLIENTS];
+		bot_weapon[entref.entnum] = iWeaponIndex;
+		Scr_AddBool(true);
+		return;
+	}
+#endif
+
 	G_SelectWeaponIndex(entref.entnum, iWeaponIndex);
 	Scr_AddBool(true);
 }
