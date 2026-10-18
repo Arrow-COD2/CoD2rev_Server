@@ -1,3 +1,7 @@
+> **FM fork, branch `fm-sniper`:** runs zk_libcod mods unchanged on CoD2rev
+> (MySQL integer handles, JSON module, weapon index and `getStance` fixes).
+> See [FM_FORK.md](FM_FORK.md) for the changes, build and run notes.
+
 # zk_libcod → CoD2rev_Server — Port Report
 
 Generated from the staged source of record (`gsc.cpp` registration tables, the `gsc_zk_*` feature modules, and `libcod.cpp`'s `RegisterLibcodDvars()`). This lists the **zk feature set ported onto rev's native engine-binding layer** — the GSC builtins now callable from script and the dvars now registered. rev's own pre-existing libcod modules (MySQL, SQLite, HTTP, memory, exec, match, websocket) and rev/cod2x-native player/entity builtins are **not** counted here; several of those received x64 pointer-correctness fixes but were not part of the zk feature port.
