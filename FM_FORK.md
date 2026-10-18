@@ -7,7 +7,7 @@ editing a single line of GSC.
 
 Base: [theCrow007/CoD2rev_Server](https://github.com/theCrow007/CoD2rev_Server),
 branch `test` (Crow's zk_libcod port plus his `SV_UserinfoChanged` experiment).
-Nine fix commits on top, each independent.
+Ten commits on top, each independent.
 
 ## What this branch changes
 
@@ -22,6 +22,7 @@ Nine fix commits on top, each independent.
 | Bot input reset and `switchToWeapon` | Bot buttons, movement and requested weapon were never cleared, so a bot taking over a slot inherited a held reload or fire button and could not raise its scope (bots replaced for a dead scope). `switchToWeapon()` sent a server command that a bot never reads. | Bot input is cleared on connect with the rest of the per-client state. For a bot, `switchToWeapon()` sets the weapon its usercmd asks for, as on zk. |
 | Keep every queued server command | The engine replaced a server command not yet sent by a newer one of the same kind. Several `executeClientCommand()` calls in one frame all queue a `v activeAction` command, so only the last reached the client: login fields declared with `setu` never became userinfo and the login menu read empty values. | `SV_CanReplaceServerCommand()` returns -1 in libcod builds, as zk_libcod does (an exploit fix it took from IW4x). |
 | Send message fragments one per frame | The libcod fast download loop drained every fragment of a large message in one burst, for every client. A gamestate (about 11 KB, 9 packets) left all at once; lines with small buffers (ADSL) lost the tail of the burst every time and the client looped on `dropped gamestate, resending`, never entering the game. | One fragment per pass, paced by the client rate, as in the stock engine. Fast download still sends a fragment per pass of its loop. |
+| Native stack on a fatal signal | A crash such as `free(): invalid pointer` left a single line in the console, with nothing to say where it happened. | On SIGSEGV, SIGABRT, SIGBUS or SIGILL the server writes its call stack to stderr (the console log), then dies as before (same exit code, core dumps unchanged). Resolve the addresses with `addr2line -f -e <binary> 0x...`: the binary is built `-no-pie` and not stripped. |
 
 ## Build
 
