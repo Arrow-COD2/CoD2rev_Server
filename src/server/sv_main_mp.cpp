@@ -244,6 +244,14 @@ int SV_CanReplaceServerCommand( client_t *client, const char *cmd )
 	int i;
 	int index;
 
+#ifdef LIBCOD
+	// zk_libcod disables replacement (an exploit fix taken over from IW4x).
+	// Mods rely on it: several executeClientCommand() calls in one frame each
+	// queue a "v activeAction" dvar command, and with replacement only the
+	// last one ever reaches the client. Every queued command is now sent.
+	return -1;
+#endif
+
 	for( i = client->reliableSent + 1; i <= client->reliableSequence; ++i)
 	{
 		index = i & (MAX_RELIABLE_COMMANDS - 1);
