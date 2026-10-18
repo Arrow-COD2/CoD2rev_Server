@@ -592,7 +592,10 @@ scr_method_t scriptMethods[] =
 	{"setGravity", gsc_zk_player_setgravity, 0},
 	// --- end zk port ---
 	{"getIp", gsc_player_getip, 0},
-	{"getstance", gsc_player_stance_get, 0},
+	// Method lookup is case-insensitive and returns the first match, so only one
+	// getStance can be registered. Keep the zk_libcod / CoD2x return values
+	// ("stand", "crouch", "prone") that existing mods compare against.
+	// gsc_player_stance_get ("duck", "lie") stays available to C code.
 	{"getStance", gsc_player_stance_get_cod2x, 0},
 	{"setstance", gsc_player_stance_set, 0},
 	{"setvelocity", gsc_player_velocity_set, 0},
