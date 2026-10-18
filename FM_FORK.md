@@ -7,8 +7,7 @@ editing a single line of GSC.
 
 Base: [theCrow007/CoD2rev_Server](https://github.com/theCrow007/CoD2rev_Server),
 branch `test` (Crow's zk_libcod port plus his `SV_UserinfoChanged` experiment).
-Six commits on top, each independent and each applying cleanly on Crow's
-`master` as well.
+Seven fix commits on top, each independent.
 
 ## What this branch changes
 
@@ -20,6 +19,7 @@ Six commits on top, each independent and each applying cleanly on Crow's
 | `getEntByNum` outside `/# #/` | rev keeps the stock developer-only flag; zk_libcod removes it on 1.3, so mods use the return value directly (compile error on rev). | Registered as a normal builtin in libcod builds. Stock behavior kept without `LIBCOD`. |
 | Weapons: 1-based index | `isValidWeaponId()` assumed 0-based ids: the **last** loaded weapon was rejected and index 0 (`none`, also what an unknown name resolves to) was accepted. | Range is `1..BG_GetNumWeapons()`, as in the engine and zk. An unknown weapon returns `undefined` with a developer print instead of a fatal script error, as on zk. |
 | `getStance` registered once | `getstance` (`"duck"`/`"lie"`) and `getStance` (`"crouch"`/`"prone"`) were both registered; lookup is case-insensitive and stops at the first match, so the zk-compatible values were unreachable. | Only the zk / CoD2x variant is registered. |
+| Bot input reset and `switchToWeapon` | Bot buttons, movement and requested weapon were never cleared, so a bot taking over a slot inherited a held reload or fire button and could not raise its scope (bots replaced for a dead scope). `switchToWeapon()` sent a server command that a bot never reads. | Bot input is cleared on connect with the rest of the per-client state. For a bot, `switchToWeapon()` sets the weapon its usercmd asks for, as on zk. |
 
 ## Build
 
@@ -57,6 +57,10 @@ Notes from the migration:
 - Relative paths read by scripts (`json_load`, `fopen`...) resolve under
   `fs_homepath/fs_game`. If the 1.3 server ran with the default
   `~/.callofduty2`, link those directories into the new `fs_homepath`.
+- `sv_botReconnectMode` is applied on `map_restart` only. To drop bots on a
+  map change, as zk does with `sv_botReconnectMode 1`, also set
+  `sv_kickbots 1`; otherwise bots stay connected without entering the new map
+  (spectators with ping -1).
 - Process managers that match `cod2_lnxded` do not see `cod2rev_lnxded_x64`;
   match on `_lnxded` plus the port instead. libcod is compiled in, so there is
   no `libcod2.so` in `/proc/<pid>/maps`.
