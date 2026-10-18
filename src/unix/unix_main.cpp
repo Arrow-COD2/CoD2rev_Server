@@ -37,6 +37,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/wait.h>
 #include <sys/mman.h>
 #include <errno.h>
+#include <execinfo.h>
 #ifdef __linux__ // rb010123
   #include <mntent.h>
 #endif
@@ -1243,6 +1244,53 @@ void Sys_ParseArgs( int argc, char* argv[] ) {
   }
 }
 
+/*
+==================
+Sys_CrashHandler
+
+Prints the native stack to stderr (the console log when the server output is
+redirected) on a fatal signal, then lets the signal kill the process as
+before, so core dumps and exit codes are unchanged. Without it a crash such as
+"free(): invalid pointer" leaves no clue about where it happened.
+Only async-signal-safe calls: write() and backtrace_symbols_fd(), which do not
+allocate. backtrace() itself is primed once at startup, because its first call
+loads libgcc and may allocate - not something to do on a corrupted heap.
+==================
+*/
+static void Sys_CrashHandler( int sig )
+{
+  void *frames[64];
+  int count;
+  char line[64];
+  int len;
+
+  len = snprintf(line, sizeof(line), "\n******** FATAL SIGNAL %d - native stack ********\n", sig);
+  if ( len > 0 )
+    write(STDERR_FILENO, line, len);
+
+  count = backtrace(frames, 64);
+  backtrace_symbols_fd(frames, count, STDERR_FILENO);
+
+  len = snprintf(line, sizeof(line), "******** end of stack ********\n");
+  if ( len > 0 )
+    write(STDERR_FILENO, line, len);
+
+  signal(sig, SIG_DFL);
+  raise(sig);
+}
+
+static void Sys_InstallCrashHandler( void )
+{
+  void *prime[1];
+
+  backtrace(prime, 1);
+
+  signal(SIGSEGV, Sys_CrashHandler);
+  signal(SIGABRT, Sys_CrashHandler);
+  signal(SIGBUS, Sys_CrashHandler);
+  signal(SIGILL, Sys_CrashHandler);
+}
+
 int main ( int argc, char* argv[] )
 {
   // int 	oldtime, newtime; // bk001204 - unused
@@ -1253,6 +1301,8 @@ int main ( int argc, char* argv[] )
   // go back to real user for config loads
   saved_euid = geteuid();
   seteuid(getuid());
+
+  Sys_InstallCrashHandler();
 
   Sys_InitMainThread();
   Dvar_Init();
