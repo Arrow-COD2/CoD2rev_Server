@@ -29,7 +29,9 @@ LFLAGS=$(ARCH_LFLAGS) -no-pie
 ifeq ($(OS),Windows_NT)
 LLIBS=-static -mwindows -lstdc++ -lws2_32 -lwinmm
 else
-LLIBS=-lm -lpthread -lstdc++ -lssl -lcrypto -ldl
+# -lspeex: gsc_zk_sound.cpp builds custom voice playback by default
+# (COMPILE_CUSTOM_VOICE in gsc_zk_sound.hpp) and calls the Speex encoder
+LLIBS=-lm -lpthread -lstdc++ -lssl -lcrypto -ldl -lspeex
 endif
 
 # Setup binary names.
