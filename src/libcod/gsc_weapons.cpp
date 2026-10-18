@@ -6,7 +6,10 @@ qboolean isValidWeaponId(int id)
 {
 	int weps = BG_GetNumWeapons();
 
-	if (id >= weps || id < 0 || weps == 0)
+	// Weapon defs are 1-based: index 0 is the "none" slot and is also what
+	// BG_FindWeaponIndexForName() returns for an unknown name, and the last
+	// registered weapon sits at index weps (see BG_SetupWeaponDef)
+	if (id > weps || id <= 0 || weps == 0)
 		return qfalse;
 
 	return qtrue;
@@ -30,7 +33,9 @@ void gsc_weapons_getweaponmaxammo()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_getweaponmaxammo() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_getweaponmaxammo() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -57,7 +62,9 @@ void gsc_weapons_getweaponclipsize()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_getweaponclipsize() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_getweaponclipsize() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -84,7 +91,9 @@ void gsc_weapons_getweapondamage()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_getweapondamage() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_getweapondamage() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -111,7 +120,9 @@ void gsc_weapons_getweaponmeleedamage()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_getweaponmeleedamage() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_getweaponmeleedamage() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -138,7 +149,9 @@ void gsc_weapons_getweaponfiretime()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_getweaponfiretime() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_getweaponfiretime() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -165,7 +178,9 @@ void gsc_weapons_getweaponmeleetime()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_getweaponmeleetime() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_getweaponmeleetime() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -192,7 +207,9 @@ void gsc_weapons_getweaponreloadtime()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_getweaponreloadtime() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_getweaponreloadtime() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -219,7 +236,9 @@ void gsc_weapons_getweaponreloademptytime()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_getweaponreloademptytime() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_getweaponreloademptytime() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -246,7 +265,9 @@ void gsc_weapons_getweaponcookable()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_getweaponcookable() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_getweaponcookable() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -274,7 +295,9 @@ void gsc_weapons_setweapondamage()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_setweapondamage() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_setweapondamage() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -304,7 +327,9 @@ void gsc_weapons_setweaponmaxammo()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_setweaponmaxammo() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_setweaponmaxammo() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -334,7 +359,9 @@ void gsc_weapons_setweaponclipsize()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_setweaponclipsize() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_setweaponclipsize() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -364,7 +391,9 @@ void gsc_weapons_setweaponmeleedamage()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_setweaponmeleedamage() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_setweaponmeleedamage() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -394,7 +423,9 @@ void gsc_weapons_setweaponfiretime()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_setweaponfiretime() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_setweaponfiretime() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -424,7 +455,9 @@ void gsc_weapons_setweaponmeleetime()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_setweaponmeleetime() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_setweaponmeleetime() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -454,7 +487,9 @@ void gsc_weapons_setweaponreloadtime()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_setweaponreloadtime() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_setweaponreloadtime() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -484,7 +519,9 @@ void gsc_weapons_setweaponreloademptytime()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_setweaponreloademptytime() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_setweaponreloademptytime() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -515,7 +552,9 @@ void gsc_weapons_setweaponcookable()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_setweaponcookable() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_setweaponcookable() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -562,7 +601,9 @@ void gsc_weapons_getweaponhitlocmultiplier()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_getweaponhitlocmultiplier() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_getweaponhitlocmultiplier() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
@@ -593,7 +634,9 @@ void gsc_weapons_setweaponhitlocmultiplier()
 
 	if (!isValidWeaponId(id))
 	{
-		stackError("gsc_weapons_setweaponhitlocmultiplier() weapon index is out of bounds");
+		// Not a script error: zk_libcod returns undefined here, so mods skip
+		// weapons that are not loaded on this map
+		Com_DPrintf("gsc_weapons_setweaponhitlocmultiplier() weapon index %i is out of bounds\n", id);
 		stackPushUndefined();
 		return;
 	}
