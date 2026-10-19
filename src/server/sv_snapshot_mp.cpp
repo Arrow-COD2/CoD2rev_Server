@@ -953,23 +953,34 @@ void SV_SendClientMessages( void )
 
 #ifdef LIBCOD
 		extern int client_challenge_ping[MAX_CLIENTS];
+		// A client in a fast (non-www) download gets up to sv_fastDownloadSpeed
+		// messages per frame, each one sent whole: that burst is the point of
+		// fast download. Every other client gets the stock pacing: one fragment
+		// per frame, timed by its rate. Draining all fragments for every
+		// client sent a large message (an 11 KB gamestate is 9 packets) in one
+		// burst; lines with small buffers (ADSL) drop the tail of it, a
+		// fragmented message is lost with any of its fragments, and the client
+		// looped on "dropped gamestate, resending" forever.
+		qboolean fastDownload = (qboolean)( sv_fastDownload->current.boolean && *c->downloadName && !c->downloadingWWW && !c->clientDownloadingWWW && client_challenge_ping[i] <= 100 );
+
 		for ( int j = 0; j < sv_fastDownloadSpeed->current.integer; j++ ) // libcod: sv_fastDownloadSpeed (was MAX_DOWNLOAD_WINDOW)
 		{
-			if ( !sv_fastDownload->current.boolean || !*c->downloadName || c->downloadingWWW || c->clientDownloadingWWW || client_challenge_ping[i] > 100 )
+			if ( !fastDownload )
 			{
 				j = 99999;
 			}
 
 			// send additional message fragments if the last message
 			// was too large to send at once
-			// One fragment per pass, paced by the client rate, as in the stock
-			// code below. A while loop sent every fragment of a large message
-			// (an 11 KB gamestate is 9 packets) in one burst, followed by a
-			// snapshot; lines with small buffers (ADSL) drop the tail of such a
-			// burst, a fragmented message is lost if one fragment is, and the
-			// client looped on "dropped gamestate, resending" forever. During
-			// a fast download each pass of this loop still sends a fragment.
-			if ( c->netchan.unsentFragments )
+			if ( fastDownload )
+			{
+				while ( c->netchan.unsentFragments )
+				{
+					c->nextSnapshotTime = svs.time + SV_RateMsec( c, c->netchan.unsentLength - c->netchan.unsentFragmentStart );
+					SV_Netchan_TransmitNextFragment(&c->netchan);
+				}
+			}
+			else if ( c->netchan.unsentFragments )
 			{
 				c->nextSnapshotTime = svs.time + SV_RateMsec( c, c->netchan.unsentLength - c->netchan.unsentFragmentStart );
 				SV_Netchan_TransmitNextFragment(&c->netchan);
