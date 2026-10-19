@@ -7,7 +7,7 @@ editing a single line of GSC.
 
 Base: [theCrow007/CoD2rev_Server](https://github.com/theCrow007/CoD2rev_Server),
 branch `test` (Crow's zk_libcod port plus his `SV_UserinfoChanged` experiment).
-Ten commits on top, each independent.
+Eleven commits on top, each independent.
 
 ## What this branch changes
 
@@ -23,6 +23,7 @@ Ten commits on top, each independent.
 | Keep every queued server command | The engine replaced a server command not yet sent by a newer one of the same kind. Several `executeClientCommand()` calls in one frame all queue a `v activeAction` command, so only the last reached the client: login fields declared with `setu` never became userinfo and the login menu read empty values. | `SV_CanReplaceServerCommand()` returns -1 in libcod builds, as zk_libcod does (an exploit fix it took from IW4x). |
 | Send message fragments one per frame | The libcod fast download loop drained every fragment of a large message in one burst, for every client, fast download or not. A gamestate (about 11 KB, 9 packets) left all at once; lines with small buffers (ADSL) lost the tail of the burst every time and the client looped on `dropped gamestate, resending`, never entering the game. | Clients in a fast (non-www) download keep the original drain, so fast download speed is unchanged. Every other client gets the stock pacing: one fragment per frame, timed by its rate. |
 | Native stack on a fatal signal | A crash such as `free(): invalid pointer` left a single line in the console, with nothing to say where it happened. | On SIGSEGV, SIGABRT, SIGBUS or SIGILL the server writes its call stack to stderr (the console log), then dies as before (same exit code, core dumps unchanged). Resolve the addresses with `addr2line -f -e <binary> 0x...`: the binary is built `-no-pie` and not stripped. |
+| Userinfo applied on the server again | Crow's `test` branch moved `SV_UserinfoChanged()` out of `SV_UpdateUserinfo_f()` into the `clientUserinfoChanged()` script method, which zk mods do not call (they call `processClientUserinfoChange()`). A name, rate or snaps change during a game then reached the scoreboard but not the server: rcon `status` kept the old name. That method also called the userinfo hook again, so calling it from `CodeCallback_UserInfoChanged` recursed. | Reverted to the stock order, as in zk_libcod: the server side is applied when the userinfo arrives, then the script callback runs; `clientUserinfoChanged()` applies the game side only. |
 
 ## Build
 
@@ -67,11 +68,3 @@ Notes from the migration:
 - Process managers that match `cod2_lnxded` do not see `cod2rev_lnxded_x64`;
   match on `_lnxded` plus the port instead. libcod is compiled in, so there is
   no `libcod2.so` in `/proc/<pid>/maps`.
-
-## Known open point
-
-Crow's `test` branch moved `SV_UserinfoChanged()` out of `SV_UpdateUserinfo_f()`
-into the `clientUserinfoChanged()` script method, which zk mods do not call.
-Rate, snaps and the server-side name may then not update when a client changes
-its userinfo during a game. Not changed here: it is Crow's experiment, to be
-discussed with him upstream.
