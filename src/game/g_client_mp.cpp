@@ -826,6 +826,19 @@ void ClientSpawn( gentity_t *ent, const vec3_t spawn_origin, const vec3_t spawn_
 	// the respawned flag will be cleared after the attack and jump keys come up
 	client->ps.pm_flags |= PMF_RESPAWNED;
 
+#ifdef LIBCOD
+	// A bot never lets go of a button by itself. A bot killed between
+	// fireWeapon(true) and fireWeapon(false) respawned with fire held, so
+	// PMF_RESPAWNED never cleared - and while it is set the weapon code does
+	// not run at all: no aim down sight, no firing, for that whole life.
+	// A human releases the key; release it for the bot.
+	if ( svs.clients[ent->s.number].netchan.remoteAddress.type == NA_BOT )
+	{
+		extern int bot_buttons[MAX_CLIENTS];
+		bot_buttons[ent->s.number] &= ~(BUTTON_ATTACK | BUTTON_BINOCULARS);
+	}
+#endif
+
 	SetClientViewAngle(ent, spawn_angles);
 
 	client->inactivityTime = level.time + 1000 * g_inactivity->current.integer;
