@@ -7,7 +7,7 @@ editing a single line of GSC.
 
 Base: [theCrow007/CoD2rev_Server](https://github.com/theCrow007/CoD2rev_Server),
 branch `test` (Crow's zk_libcod port plus his `SV_UserinfoChanged` experiment).
-Sixteen commits on top, each independent.
+Twenty-two commits on top, each independent.
 
 ## What this branch changes
 
@@ -28,22 +28,26 @@ Sixteen commits on top, each independent.
 | Unchanged delta copies the real size | `MSG_ReadDeltaStruct()` copied `(numFields + sizeof(ptr)) * sizeof(ptr)` bytes for an unchanged structure: 12 bytes too many on x86, up to 332 on x64. On the last slot of the cached snapshot entity ring (killcam archives) it wrote past the heap block; most likely cause of `free(): invalid pointer` on map changes. | `(numFields + 1) * sizeof(int32_t)`, exactly the structure size. From voron's master. |
 | Duplicate part buffer sized for 128 parts | `DObjCreateDuplicateParts()` kept the part bits and the duplicate part list in a static `int[5]`; the list overran into the following globals for melded models (attached hats, weapons). | `int[128]` (`DOBJ_MAX_PARTS`). From voron's master. |
 | Client loops bounded by `sv_maxclients` | `zk_RunTalkerIcons()` and `SV_PreGameUserVoice()` looped to `MAX_CLIENTS` (64) over `svs.clients`, which holds `sv_maxclients` entries: a read past the array every frame, and voice packets written past it when `sv_voice` is on. | Loop to `sv_maxclients`. Not in voron's master (the voice loop is still to 64 there). |
-| Release build (`-DNDEBUG`) | Crow's Makefile built with `assert()` enabled, unlike voron's (`-DNDEBUG`) and the original game. A live server aborted on an internal check the release game never ran: `cachedClient != oldCachedClient` in `SV_GetCachedSnapshotInternal()` (cached snapshot client ring overlap, killcam). | `-DNDEBUG` added to `CFLAGS`. voron also builds with `-O1 -mfpmath=387`; not changed here. |
+| Release build (`-DNDEBUG`) | Crow's Makefile built with `assert()` enabled, unlike voron's (`-DNDEBUG`) and the original game. A live server aborted on an internal check the release game never ran: `cachedClient != oldCachedClient` in `SV_GetCachedSnapshotInternal()` (cached snapshot client ring overlap, killcam). | `-DNDEBUG` added to `CFLAGS`. voron also builds with `-O1`; not changed here. |
+| MySQL reconnection | The bundled MySQL 5.7 headers and libmysqlclient 8 number the options differently: `MYSQL_OPT_RECONNECT` was sent as `MYSQL_OPT_SSL_CERT`, so a dropped database connection was never restored, and a garbage SSL certificate path was set. | Connection parameters kept; a query failing with 2006, 2013 or 4031 reconnects once and runs again (sync and async). Independent of the client library. |
+| Spawn table terminator | `spawns[]` had no `{ 0, 0 }` terminator: `G_CallSpawn()` read past the table for every entity without a spawn function. | Terminator added. From voron's master. |
+| Exact `I_rsqrt` | The Quake bit trick read a float through a `long`, 8 bytes on x64: stack garbage could flip the sign of the result in the animation and bone code. | `1.0f / sqrtf()`. From voron's master. |
+| BSP entity lump clamp | An entity lump past the end of the `.d3dbsp` was read past the BSP buffer. | Clamped (voron's master), zero entities if nothing is in the file, entity string terminated inside its block. |
+| Script parser tables | The lexer and parser read past `yy_accept` and `yypgoto`. | voron's `scr_yacc.cpp` (padded tables, cleared buffer state), keeping the O0 pragma of the x64 parser fixes. |
+| `-mfpmath=387` | x64 builds used SSE floating point; the original game and the clients predicting movement use x87. | Same flag as voron. x86 builds were already x87. |
 
 ## Already fixed upstream
 
 Crow's `test` branch was taken from an older rev. voron00/CoD2rev_Server
-`master` (October 2026) already fixes the first three memory bugs above;
-this fork uses the same code. When syncing with rev, take voron's version
-of `SV_Startup()`, `MSG_ReadDeltaStruct()` and `DObjCreateDuplicateParts()`.
+`master` (October 2026) already fixes several of the bugs above; this fork
+uses the same code where voron has it (marked "From voron's master").
+When syncing with rev, take voron's version of `SV_Startup()`,
+`MSG_ReadDeltaStruct()`, `DObjCreateDuplicateParts()`, the `spawns[]`
+table, `I_rsqrt()`, `Com_ValidateBspLumpData()` and `scr_yacc.cpp`, and
+build with `-DNDEBUG -mfpmath=387` like voron.
 
-AddressSanitizer also reports reads past the end of a few engine tables
-(`yylex`/`yyparse`, `G_CallSpawn`, BSP entity string, `I_rsqrt`). They
-read and do not write; not changed here.
-
-The bundled MySQL headers are 5.7 while systems link libmysqlclient 8:
-`MYSQL_OPT_RECONNECT` from the old header is `MYSQL_OPT_SSL_CERT` in
-version 8, so automatic reconnection is never enabled. Not changed here.
+Not in voron's master: the MySQL reconnection, the `sv_maxclients` bound
+of the pregame voice loop, and the terminated entity string.
 
 ## Build
 
