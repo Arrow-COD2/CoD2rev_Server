@@ -11,7 +11,10 @@ void DObjSkelClear( DObj_s *obj )
 
 void DObjCreateDuplicateParts(DObj_s *obj)
 {
-	static int duplicatePartBits[5];
+	// Part bits (4 ints, 128 parts) followed by the duplicate part list,
+	// read back as one string. Sized as in voron00/CoD2rev_Server
+	// (DOBJ_MAX_PARTS ints); it was int[5] and the list overran.
+	int duplicatePartBits[128];
 	int index;
 	bool bRootMeld;
 	int len;
@@ -25,7 +28,7 @@ void DObjCreateDuplicateParts(DObj_s *obj)
 	int boneCount;
 
 	duplicateParts = (byte *)&duplicatePartBits[4];
-	memset(duplicatePartBits, 0, sizeof(duplicatePartBits));
+	memset(duplicatePartBits, 0, 4 * sizeof(int));
 	len = 0;
 	numBones = obj->models[0]->parts->numBones;
 	boneCount = 1;
