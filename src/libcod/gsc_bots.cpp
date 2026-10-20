@@ -329,6 +329,21 @@ void gsc_bots_getadsblock(scr_entref_t id)
 		return;
 	}
 
+	// Set at spawn, cleared once fire is released: until then the weapon
+	// code, including the aim down sight lerp, does not run at all
+	if ( ps->pm_flags & PMF_RESPAWNED )
+	{
+		stackPushString((buttons & (BUTTON_ATTACK | BUTTON_BINOCULARS)) ? "respawned_fire_held" : "respawned");
+		return;
+	}
+
+	extern int zk_GetHoldingDownWeapon(int clientNum);
+	if ( zk_GetHoldingDownWeapon(id.entnum) )
+	{
+		stackPushString("held_down");
+		return;
+	}
+
 	if ( ps->pm_type >= PM_NORMAL_LINKED && ps->pm_type <= PM_DEAD_LINKED )
 	{
 		stackPushString("linked");
