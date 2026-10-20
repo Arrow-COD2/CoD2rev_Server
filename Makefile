@@ -26,7 +26,10 @@ endif
 # checks are debug aids. Left in, an internal check that the release game
 # never ran (e.g. the cached snapshot client ring overlap in
 # SV_GetCachedSnapshotInternal) aborts a live server.
-CFLAGS=$(ARCH_CFLAGS) -DNDEBUG
+# -mfpmath=387: floating point on the x87 unit, as voron00/CoD2rev_Server
+# and the original 32-bit game, so movement and physics round the same way
+# as the clients predicting them (x64 defaults to SSE).
+CFLAGS=$(ARCH_CFLAGS) -DNDEBUG -mfpmath=387
 CXXFLAGS=$(CFLAGS) -std=c++17
 LFLAGS=$(ARCH_LFLAGS) -no-pie
 
