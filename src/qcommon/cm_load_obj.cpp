@@ -1282,8 +1282,11 @@ static void CMod_LoadEntityString()
 	entityString = (char *)Com_GetBspLump(LUMP_ENTITIES, sizeof(char), &count);
 
 	cm.numEntityChars = count;
-	cm.entityString = (char *)CM_Hunk_Alloc(count);
+	// One extra byte for the terminator: the entity string is parsed as a C
+	// string, and an empty or clamped lump must still end inside the block
+	cm.entityString = (char *)CM_Hunk_Alloc(count + 1);
 	Com_Memcpy(cm.entityString, entityString, count);
+	cm.entityString[count] = 0;
 }
 
 /*
