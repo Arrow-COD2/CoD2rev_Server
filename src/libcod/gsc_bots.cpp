@@ -393,7 +393,12 @@ void gsc_bots_getadsblock(scr_entref_t id)
 		return;
 	}
 
-	stackPushString("ok");
+	// Nothing blocks it on paper: report the state the movement code works
+	// from, to tell a scope that is not lerping (frac stuck while pmf_ads=1)
+	// from movement code that is not running for this player (cmdlag grows).
+	stackPushString(va("ok pmf_ads=%d frac=%.2f ws=%d pm=%d cmdlag=%d",
+	                   (ps->pm_flags & PMF_ADS) ? 1 : 0, ps->fWeaponPosFrac, ps->weaponstate,
+	                   ps->pm_type, svs.time - ps->commandTime));
 }
 
 void gsc_bots_adsaim(scr_entref_t id)
