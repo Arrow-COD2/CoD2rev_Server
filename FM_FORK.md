@@ -7,7 +7,7 @@ editing a single line of GSC.
 
 Base: [theCrow007/CoD2rev_Server](https://github.com/theCrow007/CoD2rev_Server),
 branch `test` (Crow's zk_libcod port plus his `SV_UserinfoChanged` experiment).
-Fifteen commits on top, each independent.
+Sixteen commits on top, each independent.
 
 ## What this branch changes
 
@@ -28,6 +28,7 @@ Fifteen commits on top, each independent.
 | Unchanged delta copies the real size | `MSG_ReadDeltaStruct()` copied `(numFields + sizeof(ptr)) * sizeof(ptr)` bytes for an unchanged structure: 12 bytes too many on x86, up to 332 on x64. On the last slot of the cached snapshot entity ring (killcam archives) it wrote past the heap block; most likely cause of `free(): invalid pointer` on map changes. | `(numFields + 1) * sizeof(int32_t)`, exactly the structure size. From voron's master. |
 | Duplicate part buffer sized for 128 parts | `DObjCreateDuplicateParts()` kept the part bits and the duplicate part list in a static `int[5]`; the list overran into the following globals for melded models (attached hats, weapons). | `int[128]` (`DOBJ_MAX_PARTS`). From voron's master. |
 | Client loops bounded by `sv_maxclients` | `zk_RunTalkerIcons()` and `SV_PreGameUserVoice()` looped to `MAX_CLIENTS` (64) over `svs.clients`, which holds `sv_maxclients` entries: a read past the array every frame, and voice packets written past it when `sv_voice` is on. | Loop to `sv_maxclients`. Not in voron's master (the voice loop is still to 64 there). |
+| Release build (`-DNDEBUG`) | Crow's Makefile built with `assert()` enabled, unlike voron's (`-DNDEBUG`) and the original game. A live server aborted on an internal check the release game never ran: `cachedClient != oldCachedClient` in `SV_GetCachedSnapshotInternal()` (cached snapshot client ring overlap, killcam). | `-DNDEBUG` added to `CFLAGS`. voron also builds with `-O1 -mfpmath=387`; not changed here. |
 
 ## Already fixed upstream
 

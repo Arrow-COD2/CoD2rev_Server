@@ -22,7 +22,11 @@ else
 $(error Unsupported ARCH '$(ARCH)'; use x86 or x64)
 endif
 
-CFLAGS=$(ARCH_CFLAGS)
+# Release build, as voron00/CoD2rev_Server and the original game: assert()
+# checks are debug aids. Left in, an internal check that the release game
+# never ran (e.g. the cached snapshot client ring overlap in
+# SV_GetCachedSnapshotInternal) aborts a live server.
+CFLAGS=$(ARCH_CFLAGS) -DNDEBUG
 CXXFLAGS=$(CFLAGS) -std=c++17
 LFLAGS=$(ARCH_LFLAGS) -no-pie
 
