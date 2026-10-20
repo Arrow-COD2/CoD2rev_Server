@@ -25,6 +25,34 @@ Eleven commits on top, each independent.
 | Native stack on a fatal signal | A crash such as `free(): invalid pointer` left a single line in the console, with nothing to say where it happened. | On SIGSEGV, SIGABRT, SIGBUS or SIGILL the server writes its call stack to stderr (the console log), then dies as before (same exit code, core dumps unchanged). Resolve the addresses with `addr2line -f -e <binary> 0x...`: the binary is built `-no-pie` and not stripped. |
 | Userinfo applied on the server again | Crow's `test` branch moved `SV_UserinfoChanged()` out of `SV_UpdateUserinfo_f()` into the `clientUserinfoChanged()` script method, which zk mods do not call (they call `processClientUserinfoChange()`). A name, rate or snaps change during a game then reached the scoreboard but not the server: rcon `status` kept the old name. That method also called the userinfo hook again, so calling it from `CodeCallback_UserInfoChanged` recursed. | Reverted to the stock order, as in zk_libcod: the server side is applied when the userinfo arrives, then the script callback runs; `clientUserinfoChanged()` applies the game side only. |
 
+## Already fixed upstream
+
+Crow's `test` branch was taken from an older rev. voron00/CoD2rev_Server
+`master` (October 2026) already fixes three memory bugs that this base
+still has. Any server built from this base should take voron's version of:
+
+- `SV_Startup()`: `svs.clients` allocated with `Z_Malloc`, which clears it
+  (`malloc` left it uninitialised).
+- `MSG_ReadDeltaStruct()`: an unchanged structure copies
+  `(numFields + 1) * sizeof(int32_t)` bytes. The old size overran every
+  structure (up to 332 bytes on x64) and wrote past the cached snapshot
+  entity ring used by the killcam: most likely cause of
+  `free(): invalid pointer` on map changes.
+- `DObjCreateDuplicateParts()`: a duplicate part buffer of
+  `DOBJ_MAX_PARTS` ints instead of `int[5]`.
+
+These three, plus `sv_maxclients` bounds for the talker icon and pregame
+voice loops, are in branch `fm-memory`, under test before being merged
+here.
+
+AddressSanitizer also reports reads past the end of a few engine tables
+(`yylex`/`yyparse`, `G_CallSpawn`, BSP entity string, `I_rsqrt`). They
+read and do not write; not changed.
+
+The bundled MySQL headers are 5.7 while systems link libmysqlclient 8:
+`MYSQL_OPT_RECONNECT` from the old header is `MYSQL_OPT_SSL_CERT` in
+version 8, so automatic reconnection is never enabled. Not changed.
+
 ## Build
 
 ```bash
