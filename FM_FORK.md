@@ -7,7 +7,7 @@ editing a single line of GSC.
 
 Base: [theCrow007/CoD2rev_Server](https://github.com/theCrow007/CoD2rev_Server),
 branch `test` (Crow's zk_libcod port plus his `SV_UserinfoChanged` experiment).
-Eleven commits on top, each independent.
+Fifteen commits on top, each independent.
 
 ## What this branch changes
 
@@ -24,6 +24,25 @@ Eleven commits on top, each independent.
 | Send message fragments one per frame | The libcod fast download loop drained every fragment of a large message in one burst, for every client, fast download or not. A gamestate (about 11 KB, 9 packets) left all at once; lines with small buffers (ADSL) lost the tail of the burst every time and the client looped on `dropped gamestate, resending`, never entering the game. | Clients in a fast (non-www) download keep the original drain, so fast download speed is unchanged. Every other client gets the stock pacing: one fragment per frame, timed by its rate. |
 | Native stack on a fatal signal | A crash such as `free(): invalid pointer` left a single line in the console, with nothing to say where it happened. | On SIGSEGV, SIGABRT, SIGBUS or SIGILL the server writes its call stack to stderr (the console log), then dies as before (same exit code, core dumps unchanged). Resolve the addresses with `addr2line -f -e <binary> 0x...`: the binary is built `-no-pie` and not stripped. |
 | Userinfo applied on the server again | Crow's `test` branch moved `SV_UserinfoChanged()` out of `SV_UpdateUserinfo_f()` into the `clientUserinfoChanged()` script method, which zk mods do not call (they call `processClientUserinfoChange()`). A name, rate or snaps change during a game then reached the scoreboard but not the server: rcon `status` kept the old name. That method also called the userinfo hook again, so calling it from `CodeCallback_UserInfoChanged` recursed. | Reverted to the stock order, as in zk_libcod: the server side is applied when the userinfo arrives, then the script callback runs; `clientUserinfoChanged()` applies the game side only. |
+| Client table cleared at startup | `SV_Startup()` allocated `svs.clients` with `malloc` and never cleared it. Normal builds got zeroed pages by luck; under AddressSanitizer client 0 started with a garbage state and drop reason. | `Z_Malloc`, which clears the block. From voron's master. |
+| Unchanged delta copies the real size | `MSG_ReadDeltaStruct()` copied `(numFields + sizeof(ptr)) * sizeof(ptr)` bytes for an unchanged structure: 12 bytes too many on x86, up to 332 on x64. On the last slot of the cached snapshot entity ring (killcam archives) it wrote past the heap block; most likely cause of `free(): invalid pointer` on map changes. | `(numFields + 1) * sizeof(int32_t)`, exactly the structure size. From voron's master. |
+| Duplicate part buffer sized for 128 parts | `DObjCreateDuplicateParts()` kept the part bits and the duplicate part list in a static `int[5]`; the list overran into the following globals for melded models (attached hats, weapons). | `int[128]` (`DOBJ_MAX_PARTS`). From voron's master. |
+| Client loops bounded by `sv_maxclients` | `zk_RunTalkerIcons()` and `SV_PreGameUserVoice()` looped to `MAX_CLIENTS` (64) over `svs.clients`, which holds `sv_maxclients` entries: a read past the array every frame, and voice packets written past it when `sv_voice` is on. | Loop to `sv_maxclients`. Not in voron's master (the voice loop is still to 64 there). |
+
+## Already fixed upstream
+
+Crow's `test` branch was taken from an older rev. voron00/CoD2rev_Server
+`master` (October 2026) already fixes the first three memory bugs above;
+this fork uses the same code. When syncing with rev, take voron's version
+of `SV_Startup()`, `MSG_ReadDeltaStruct()` and `DObjCreateDuplicateParts()`.
+
+AddressSanitizer also reports reads past the end of a few engine tables
+(`yylex`/`yyparse`, `G_CallSpawn`, BSP entity string, `I_rsqrt`). They
+read and do not write; not changed here.
+
+The bundled MySQL headers are 5.7 while systems link libmysqlclient 8:
+`MYSQL_OPT_RECONNECT` from the old header is `MYSQL_OPT_SSL_CERT` in
+version 8, so automatic reconnection is never enabled. Not changed here.
 
 ## Build
 
