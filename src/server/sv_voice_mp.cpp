@@ -87,7 +87,9 @@ void SV_PreGameUserVoice( client_t *cl, msg_t *msg )
 
 		MSG_ReadData(msg, voicePacket.data, voicePacket.dataSize);
 
-		for ( listener = 0; listener < MAX_CLIENTS; listener++ )
+		// svs.clients holds sv_maxclients entries: looping to MAX_CLIENTS
+		// queued voice packets into memory past the end of the array
+		for ( listener = 0; listener < sv_maxclients->current.integer; listener++ )
 		{
 			if ( listener == talker )
 				continue;

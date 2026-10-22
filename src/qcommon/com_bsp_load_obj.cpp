@@ -69,7 +69,21 @@ byte* Com_ValidateBspLumpData(int type, int offset, int length, int elemSize, in
 {
 	if ( length )
 	{
-		if ( type != LUMP_ENTITIES && length + offset > comBspGlob.fileSize )
+		// Some maps store an entity lump that runs past the end of the file.
+		// Clamp it instead of reading past the BSP buffer (voron00/CoD2rev_Server).
+		if ( type == LUMP_ENTITIES && length + offset > comBspGlob.fileSize )
+		{
+			*count = ( length / elemSize ) + ( comBspGlob.fileSize - ( length + offset ) );
+			// Nothing of the lump inside the file at all: no entities
+			if ( *count < 0 || offset >= comBspGlob.fileSize )
+			{
+				*count = 0;
+				return (byte*)comBspGlob.header;
+			}
+			return (byte*)comBspGlob.header + offset;
+		}
+
+		if ( length + offset > comBspGlob.fileSize )
 		{
 			Com_Error(ERR_DROP, "CM_LoadMap: lump %i extends past end of file", type);
 		}

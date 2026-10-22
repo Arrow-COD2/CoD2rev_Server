@@ -11,6 +11,91 @@
 #define MAX_STRINGLENGTH 1024
 #endif
 
+// ---------------------------------------------------------------------------
+// Reconnection
+//
+// MYSQL_OPT_RECONNECT cannot be used: the bundled headers are MySQL 5.7 and
+// the option numbers changed in libmysqlclient 8 (the old number now means
+// MYSQL_OPT_SSL_CERT), and the option is deprecated there anyway. So the
+// connection parameters are kept, and a query that fails because the server
+// went away reconnects once and runs again. Works with any client library.
+// ---------------------------------------------------------------------------
+
+struct mysql_connect_params
+{
+	char host[256];
+	char user[256];
+	char pass[256];
+	char db[256];
+	int port;
+	bool set;
+};
+
+static mysql_connect_params mysql_sync_params;
+static mysql_connect_params mysql_async_params;
+
+static void MySQL_SaveParams(mysql_connect_params *params, const char *host, const char *user, const char *pass, const char *db, int port)
+{
+	Q_strncpyz(params->host, host, sizeof(params->host));
+	Q_strncpyz(params->user, user, sizeof(params->user));
+	Q_strncpyz(params->pass, pass, sizeof(params->pass));
+	Q_strncpyz(params->db, db, sizeof(params->db));
+	params->port = port;
+	params->set = true;
+}
+
+static MYSQL *MySQL_Connect(const mysql_connect_params *params)
+{
+	MYSQL *my = mysql_init(NULL);
+
+	if ( my == NULL )
+		return NULL;
+
+	if ( !mysql_real_connect(my, params->host, params->user, params->pass, params->db, params->port, NULL, 0) )
+	{
+		mysql_close(my);
+		return NULL;
+	}
+
+	return my;
+}
+
+// CR_SERVER_GONE_ERROR, CR_SERVER_LOST, ER_CLIENT_INTERACTION_TIMEOUT (8.0)
+static bool MySQL_IsConnectionLost(unsigned int err)
+{
+	return err == 2006 || err == 2013 || err == 4031;
+}
+
+// Runs the query; if the server went away, reconnects once and runs it again.
+// closeOld: the async connection may still be read by the main thread
+// (errno, escape_string), so its old handle is left open rather than freed.
+static int MySQL_QueryReconnect(MYSQL **conn, const mysql_connect_params *params, const char *query, bool closeOld, const char *label)
+{
+	int res = mysql_query(*conn, query);
+
+	if ( res == 0 || !params->set || !MySQL_IsConnectionLost(mysql_errno(*conn)) )
+		return res;
+
+	unsigned int err = mysql_errno(*conn);
+	MYSQL *fresh = MySQL_Connect(params);
+
+	if ( fresh == NULL )
+	{
+		Com_Printf("[MySQL] %s connection lost (%u), reconnect failed\n", label, err);
+		return res;
+	}
+
+	Com_Printf("[MySQL] %s connection lost (%u), reconnected\n", label, err);
+
+	MYSQL *old = *conn;
+	*conn = fresh;
+
+	if ( closeOld )
+		mysql_close(old);
+
+	return mysql_query(*conn, query);
+}
+
 enum
 {
 	INT_VALUE,
@@ -78,7 +163,7 @@ void *async_mysql_query_handler(void* dummy)
 
 			if ( !task->done )
 			{
-				int res = mysql_query(async_mysql_connection, task->query);
+				int res = MySQL_QueryReconnect(&async_mysql_connection, &mysql_async_params, task->query, false, "async");
 
 				if ( res == 0 )
 					task->result = mysql_store_result(async_mysql_connection);
@@ -131,11 +216,10 @@ void gsc_async_mysql_initialize()
 
 	if ( async_mysql_connection == NULL )
 	{
-		MYSQL *my = mysql_init(NULL);
-		bool reconnect = true;
-		mysql_options(my, MYSQL_OPT_RECONNECT, &reconnect);
+		MySQL_SaveParams(&mysql_async_params, host, user, pass, db, port);
+		MYSQL *my = MySQL_Connect(&mysql_async_params);
 
-		if ( !mysql_real_connect(my, host, user, pass, db, port, NULL, 0) )
+		if ( my == NULL )
 		{
 			stackError("gsc_async_mysql_initialize() failed to initialize async mysql connection!");
 			stackPushUndefined();
@@ -1034,11 +1118,10 @@ void gsc_mysql_initialize()
 
 	if ( mysql_connection == NULL )
 	{
-		MYSQL *my = mysql_init(NULL);
-		bool reconnect = true;
-		mysql_options(my, MYSQL_OPT_RECONNECT, &reconnect);
+		MySQL_SaveParams(&mysql_sync_params, host, user, pass, db, port);
+		MYSQL *my = MySQL_Connect(&mysql_sync_params);
 
-		if ( !mysql_real_connect(my, host, user, pass, db, port, NULL, 0) )
+		if ( my == NULL )
 		{
 			stackError("gsc_mysql_initialize() failed to initialize synchronous mysql connection!");
 			stackPushUndefined();
@@ -1059,6 +1142,7 @@ void gsc_mysql_close()
 	if ( mysql_connection != NULL )
 	{
 		mysql_close(mysql_connection);
+		mysql_connection = NULL;
 		stackPushBool(qtrue);
 	}
 	else
@@ -1083,7 +1167,7 @@ void gsc_mysql_query()
 		return;
 	}
 
-	stackPushInt(mysql_query(mysql_connection, query));
+	stackPushInt(MySQL_QueryReconnect(&mysql_connection, &mysql_sync_params, query, true, "sync"));
 }
 
 void gsc_mysql_errno()

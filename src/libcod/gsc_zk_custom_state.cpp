@@ -323,11 +323,12 @@ void zk_RunTalkerIcons(void)
 	fakeVoicePacket.data[0] = 0xFF; // magic: empty/fake voice payload
 	fakeVoicePacket.dataSize = 1;
 
-	for ( int i = 0; i < MAX_CLIENTS; i++ )
+	// svs.clients holds sv_maxclients entries, not MAX_CLIENTS
+	for ( int i = 0; i < sv_maxclients->current.integer; i++ )
 	{
 		if ( svs.clients[i].state < CS_CONNECTED )
 			continue;
-		for ( int j = 0; j < MAX_CLIENTS; j++ )
+		for ( int j = 0; j < sv_maxclients->current.integer; j++ )
 		{
 			if ( !customPlayerState[i].talkerIcons[j] )
 				continue;

@@ -385,6 +385,7 @@ scr_method_t scriptMethods[] =
 {
 	#if LIBCOD_COMPILE_BOTS == 1
 	{"setAim", gsc_bots_adsaim, 0},
+	{"getAdsBlock", gsc_bots_getadsblock, 0},
 	{"adsAim", gsc_bots_adsaim, 0},
 	{"setWalkDir", gsc_bots_set_walkdir, 0},
 	{"setWalkValues", gsc_bots_setwalkvalues, 0},

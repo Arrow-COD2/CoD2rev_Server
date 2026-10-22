@@ -512,6 +512,12 @@ I_rsqrt
 */
 inline float I_rsqrt(const float number)
 {
+	// Exact, as in voron00/CoD2rev_Server. The Quake bit trick below read the
+	// float through a long, which is 8 bytes on x64: it read 4 bytes of stack
+	// garbage and could flip the sign of the result (animation and bone
+	// math). Kept for reference only, never reached.
+	return 1.0f / sqrtf(number);
+
 	long i;
 	float x2, y;
 	const float threehalfs = 1.5F;

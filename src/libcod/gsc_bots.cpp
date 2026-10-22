@@ -295,6 +295,127 @@ void gsc_bots_reloadweapon(scr_entref_t id)
 	stackPushBool(qtrue);
 }
 
+// self getAdsBlock() -> string
+// Why this player's aim down sight is not up, read from the same state the
+// movement code checks (PM_IsAdsAllowed, PM_UpdateAimDownSightFlag,
+// PM_UpdateAimDownSightLerp): "button_off", "linked", "no_ads_weapon",
+// "offhand", "melee", "raising", "dropping", "binoculars", "reloading",
+// "rechambering", "prone_moving" or "ok". Read only, cheap: meant for bot
+// watchdogs, to fix the cause instead of guessing.
+void gsc_bots_getadsblock(scr_entref_t id)
+{
+	if ( id.entnum >= MAX_CLIENTS || !g_entities[id.entnum].client )
+	{
+		stackError("gsc_bots_getadsblock() entity %i is not a player", id.entnum);
+		stackPushUndefined();
+		return;
+	}
+
+	playerState_t *ps = &g_entities[id.entnum].client->ps;
+	client_t *client = &svs.clients[id.entnum];
+	int buttons;
+
+	if ( client->netchan.remoteAddress.type == NA_BOT )
+	{
+		extern int bot_buttons[MAX_CLIENTS];
+		buttons = bot_buttons[id.entnum];
+	}
+	else
+		buttons = client->lastUsercmd.buttons;
+
+	if ( !(buttons & BUTTON_ADS) )
+	{
+		stackPushString("button_off");
+		return;
+	}
+
+	// Set at spawn, cleared once fire is released: until then the weapon
+	// code, including the aim down sight lerp, does not run at all
+	if ( ps->pm_flags & PMF_RESPAWNED )
+	{
+		stackPushString((buttons & (BUTTON_ATTACK | BUTTON_BINOCULARS)) ? "respawned_fire_held" : "respawned");
+		return;
+	}
+
+	extern int zk_GetHoldingDownWeapon(int clientNum);
+	if ( zk_GetHoldingDownWeapon(id.entnum) )
+	{
+		stackPushString("held_down");
+		return;
+	}
+
+	if ( ps->pm_type >= PM_NORMAL_LINKED && ps->pm_type <= PM_DEAD_LINKED )
+	{
+		stackPushString("linked");
+		return;
+	}
+
+	WeaponDef *weapDef = BG_GetWeaponDef(BG_GetViewmodelWeaponIndex(ps));
+
+	if ( !weapDef || !weapDef->aimDownSight )
+	{
+		stackPushString("no_ads_weapon");
+		return;
+	}
+
+	if ( ps->weaponstate >= WEAPON_OFFHAND_INIT && ps->weaponstate <= WEAPON_OFFHAND_END )
+	{
+		stackPushString("offhand");
+		return;
+	}
+
+	if ( ps->weaponstate == WEAPON_MELEE_INIT || ps->weaponstate == WEAPON_MELEE_FIRE )
+	{
+		stackPushString("melee");
+		return;
+	}
+
+	if ( ps->weaponstate == WEAPON_RAISING )
+	{
+		stackPushString("raising");
+		return;
+	}
+
+	if ( ps->weaponstate == WEAPON_DROPPING )
+	{
+		stackPushString("dropping");
+		return;
+	}
+
+	if ( ps->weaponstate >= WEAPON_BINOCULARS_INIT && ps->weaponstate <= WEAPON_BINOCULARS_END )
+	{
+		stackPushString("binoculars");
+		return;
+	}
+
+	if ( ps->weaponstate == WEAPON_RELOADING || ps->weaponstate == WEAPON_RELOADING_INTERUPT
+	        || ps->weaponstate == WEAPON_RELOAD_START || ps->weaponstate == WEAPON_RELOAD_START_INTERUPT
+	        || ps->weaponstate == WEAPON_RELOAD_END )
+	{
+		stackPushString("reloading");
+		return;
+	}
+
+	if ( !weapDef->rechamberWhileAds && ps->weaponstate == WEAPON_RECHAMBERING )
+	{
+		stackPushString("rechambering");
+		return;
+	}
+
+	if ( (ps->pm_flags & PMF_PRONE) && !(ps->pm_flags & PMF_ADS) )
+	{
+		stackPushString("prone_moving");
+		return;
+	}
+
+	// Nothing blocks it on paper: report the state the movement code works
+	// from, to tell a scope that is not lerping (frac stuck while pmf_ads=1)
+	// from movement code that is not running for this player (cmdlag grows).
+	stackPushString(va("ok pmf_ads=%d frac=%.2f ws=%d pm=%d cmdlag=%d",
+	                   (ps->pm_flags & PMF_ADS) ? 1 : 0, ps->fWeaponPosFrac, ps->weaponstate,
+	                   ps->pm_type, svs.time - ps->commandTime));
+}
+
 void gsc_bots_adsaim(scr_entref_t id)
 {
 	int ads;
