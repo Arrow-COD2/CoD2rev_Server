@@ -26,6 +26,14 @@ void zk_ResetCustomPlayerState(int clientNum)
 	bot_weapon[clientNum] = 0;
 	bot_forwardmove[clientNum] = 0;
 	bot_rightmove[clientNum] = 0;
+
+	// disableItemPickup() also lives in its own array (gsc_player.cpp), so a
+	// player taking over a slot could not pick up weapons if the previous
+	// occupant (often a bot) had it disabled.
+#if LIBCOD_COMPILE_PLAYER == 1
+	extern int player_disableitempickup[MAX_CLIENTS];
+	player_disableitempickup[clientNum] = 0;
+#endif
 	for ( int oi = 0; oi < MAX_OBJECTIVES; oi++ )
 		customPlayerState[clientNum].objectives[oi].entNum = ENTITYNUM_NONE;
 

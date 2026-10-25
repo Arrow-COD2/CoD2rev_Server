@@ -7,7 +7,7 @@ editing a single line of GSC.
 
 Base: [theCrow007/CoD2rev_Server](https://github.com/theCrow007/CoD2rev_Server),
 branch `test` (Crow's zk_libcod port plus his `SV_UserinfoChanged` experiment).
-Twenty-four commits on top, each independent.
+Twenty-five commits on top, each independent.
 
 ## What this branch changes
 
@@ -37,6 +37,7 @@ Twenty-four commits on top, each independent.
 | `-mfpmath=387` | x64 builds used SSE floating point; the original game and the clients predicting movement use x87. | Same flag as voron. x86 builds were already x87. |
 | Bot fire released at spawn | A bot killed between `fireWeapon(true)` and `fireWeapon(false)` respawned with fire held, so `PMF_RESPAWNED` never cleared and the weapon code did not run for that whole life: no aim down sight, no firing. Mods kicked such bots ("scope stuck at 0 despite setAim(true)"), on zk_libcod 1.3 as well. | The spawn releases fire and binoculars for bots, as a human releases the key. Two days on a live server: no more such kicks. Mods still on 1.3 can call `self fireWeapon(false)` when a bot spawns. |
 | `getAdsBlock()` | No way to know why a player's scope stays down. | New read-only method returning the reason from the movement code's own state (`respawned_fire_held`, `linked`, `reloading`, ... or `ok` with details). |
+| Item pickup reset on connect | `disableItemPickup()` was kept in an array never cleared, so a player taking a bot's slot could not pick up weapons. | Cleared with the rest of the per-client state when a client connects. |
 
 ## Already fixed upstream
 
